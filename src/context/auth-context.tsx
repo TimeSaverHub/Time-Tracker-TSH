@@ -10,6 +10,7 @@ import {
 import { doc, getDoc, setDoc } from 'firebase/firestore'
 import { auth, db } from '@/firebase/config'
 
+// Add this type at the top of the file
 interface User {
   id: string
   email: string | null
@@ -126,4 +127,3 @@ export function useAuth() {
   }
   return context
 }
-
