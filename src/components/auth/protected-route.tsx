@@ -2,30 +2,31 @@
 
 import { useEffect } from 'react'
 import { useRouter } from 'next/navigation'
-import { useAuth } from '@/hooks/use-auth'
+import { useAuth } from '@/context/auth-context'
 import { LoadingSpinner } from '../shared/loading-spinner'
 
 export function ProtectedRoute({ children }: { children: React.ReactNode }) {
-  const { user, loading } = useAuth()
   const router = useRouter()
+  const { currentUser, loading } = useAuth()
 
   useEffect(() => {
-    if (!loading && !user) {
+    if (!loading && !currentUser) {
       router.push('/login')
     }
-  }, [user, loading, router])
+  }, [currentUser, loading, router])
 
   if (loading) {
     return (
-      <div className="flex min-h-screen items-center justify-center">
+      <div className="min-h-screen flex items-center justify-center">
         <LoadingSpinner />
       </div>
     )
   }
 
-  if (!user) {
+  if (!currentUser) {
     return null
   }
 
   return <>{children}</>
 }
+

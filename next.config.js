@@ -2,14 +2,11 @@
 const nextConfig = {
     output: 'export',
     images: {
-      unoptimized: true
-    },
-    // Ensure trailing slashes are handled
-    trailingSlash: true,
-    // Disable image optimization
-    images: {
       unoptimized: true,
     },
+    trailingSlash: true,
   }
   
   module.exports = nextConfig
+  
+  

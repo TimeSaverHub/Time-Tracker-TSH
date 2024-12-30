@@ -14,7 +14,7 @@ import {
 import { User, LogOut, Settings } from 'lucide-react'
 
 export function DashboardHeader() {
-  const { user, signOut } = useAuth()
+  const { currentUser, signOut } = useAuth()
   const [isLoading, setIsLoading] = useState(false)
 
   const handleSignOut = async () => {
@@ -46,9 +46,9 @@ export function DashboardHeader() {
               <DropdownMenuContent align="end">
                 <div className="flex items-center justify-start gap-2 p-2">
                   <div className="flex flex-col space-y-1">
-                    <p className="text-sm font-medium leading-none">{user?.name || 'User'}</p>
+                    <p className="text-sm font-medium leading-none">{currentUser?.name || 'User'}</p>
                     <p className="text-xs leading-none text-muted-foreground">
-                      {user?.email}
+                      {currentUser?.email}
                     </p>
                   </div>
                 </div>
@@ -74,3 +74,4 @@ export function DashboardHeader() {
     </header>
   )
 }
+
