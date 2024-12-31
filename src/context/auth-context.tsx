@@ -1,228 +1,139 @@
 'use client'
 
-import React, { createContext, useContext, useEffect, useState } from 'react'
+import { createContext, useContext, useEffect, useState } from 'react'
+import { auth } from '@/firebase/firebase'
 import { useRouter } from 'next/navigation'
-import {
-  createUserWithEmailAndPassword,
-  signInWithEmailAndPassword,
-  signInWithPopup,
-  signOut as firebaseSignOut,
-  onAuthStateChanged,
-  GoogleAuthProvider,
-  User as FirebaseUser,
-  AuthError
-} from 'firebase/auth'
-import { doc, getDoc, setDoc } from 'firebase/firestore'
-import { auth, db } from '@/firebase/firebase'
+import { onAuthStateChanged } from 'firebase/auth'
+import { authService } from '@/lib/auth'
+import { doc, setDoc } from 'firebase/firestore'
+import { db } from '@/firebase/firebase'
+import Cookies from 'js-cookie'
 
-interface User {
+interface AuthUser {
   id: string
   email: string | null
-  name: string | null
-  photoURL?: string | null
+  displayName: string | null
 }
 
 interface AuthContextType {
-  currentUser: User | null
+  currentUser: AuthUser | null
   loading: boolean
   error: string | null
   signIn: (email: string, password: string) => Promise<void>
-  signInWithGoogle: () => Promise<void>
   signUp: (email: string, password: string, name: string) => Promise<void>
   signOut: () => Promise<void>
+  signInWithGoogle: () => Promise<void>
   clearError: () => void
 }
 
-const AuthContext = createContext<AuthContextType | null>(null)
-
-async function createUserDocument(user: FirebaseUser, additionalData?: { name?: string }) {
-  if (!user) return
-
-  const userRef = doc(db, 'users', user.uid)
-  const snapshot = await getDoc(userRef)
-
-  if (!snapshot.exists()) {
-    const { email, photoURL, displayName } = user
-    const createdAt = new Date()
-
-    try {
-      await setDoc(userRef, {
-        email,
-        photoURL,
-        name: additionalData?.name || displayName || email?.split('@')[0],
-        createdAt,
-        updatedAt: createdAt
-      })
-    } catch (error) {
-      console.error('Error creating user document:', error)
-      throw new Error('Failed to create user profile')
-    }
-  }
-
-  return userRef
-}
-
-function getErrorMessage(error: AuthError): string {
-  switch (error.code) {
-    case 'auth/wrong-password':
-      return 'Invalid email or password'
-    case 'auth/user-not-found':
-      return 'No user found with this email'
-    case 'auth/email-already-in-use':
-      return 'Email already in use'
-    case 'auth/weak-password':
-      return 'Password should be at least 6 characters'
-    default:
-      return 'An error occurred. Please try again'
-  }
-}
+const AuthContext = createContext<AuthContextType | undefined>(undefined)
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
-  const router = useRouter()
-  const [currentUser, setCurrentUser] = useState<User | null>(null)
+  const [currentUser, setCurrentUser] = useState<AuthUser | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
-  const [isAuthenticating, setIsAuthenticating] = useState(false)
+  const router = useRouter()
 
-  // Handle auth state changes
   useEffect(() => {
-    let mounted = true
-
     const unsubscribe = onAuthStateChanged(auth, async (user) => {
-      if (!mounted) return
-
       try {
         if (user) {
-          const userDoc = await getDoc(doc(db, 'users', user.uid))
-          const userData = {
+          setCurrentUser({
             id: user.uid,
             email: user.email,
-            name: userDoc.exists() ? userDoc.data().name : user.displayName,
-            photoURL: user.photoURL
-          }
-          setCurrentUser(userData)
+            displayName: user.displayName
+          })
+          Cookies.set('firebase-auth-token', user.uid, { expires: 7 })
         } else {
           setCurrentUser(null)
+          Cookies.remove('firebase-auth-token')
+          router.push('/login')
         }
-      } catch (e) {
-        console.error('Error in auth state change:', e)
-        setError(e instanceof Error ? e.message : 'Authentication error')
+      } catch (error) {
+        console.error('Auth state change error:', error)
       } finally {
-        if (mounted) {
-          setLoading(false)
-        }
+        setLoading(false)
       }
     })
 
-    return () => {
-      mounted = false
-      unsubscribe()
-    }
-  }, [])
-
-  // Handle navigation based on auth state
-  useEffect(() => {
-    if (loading || isAuthenticating) return
-
-    const path = window.location.pathname
-    if (currentUser) {
-      if (path === '/login' || path === '/signup' || path === '/') {
-        router.push('/dashboard')
-      }
-    } else {
-      if (path !== '/login' && path !== '/signup') {
-        router.push('/login')
-      }
-    }
-  }, [currentUser, loading, isAuthenticating, router])
+    return () => unsubscribe()
+  }, [router])
 
   const signIn = async (email: string, password: string) => {
     try {
       setError(null)
-      setIsAuthenticating(true)
-      await signInWithEmailAndPassword(auth, email, password)
-      router.push('/dashboard')
-    } catch (e) {
-      console.error('Sign in error:', e)
-      const authError = e as AuthError
-      setError(getErrorMessage(authError))
-      throw e
-    } finally {
-      setIsAuthenticating(false)
-    }
-  }
-
-  const signInWithGoogle = async () => {
-    try {
-      setError(null)
-      setIsAuthenticating(true)
-      const provider = new GoogleAuthProvider()
-      const { user } = await signInWithPopup(auth, provider)
-      await createUserDocument(user)
-      router.push('/dashboard')
-    } catch (e) {
-      const authError = e as AuthError
-      setError(getErrorMessage(authError))
-      throw e
-    } finally {
-      setIsAuthenticating(false)
+      setLoading(true)
+      await authService.signIn(email, password)
+      // Router push is handled by auth state change
+    } catch (error: any) {
+      console.error('Sign in error:', error)
+      setError(error.message)
+      setLoading(false)
     }
   }
 
   const signUp = async (email: string, password: string, name: string) => {
     try {
-      setError(null)
-      setIsAuthenticating(true)
-      const { user } = await createUserWithEmailAndPassword(auth, email, password)
-      await createUserDocument(user, { name })
+      const user = await authService.signUp(email, password)
+      if (user) {
+        await setDoc(doc(db, `users/${user.uid}`), {
+          email,
+          displayName: name,
+          createdAt: new Date().toISOString()
+        })
+      }
       router.push('/dashboard')
-    } catch (e) {
-      console.error('Signup error:', e)
-      const authError = e as AuthError
-      setError(getErrorMessage(authError))
-      throw e
-    } finally {
-      setIsAuthenticating(false)
+    } catch (error: any) {
+      setError(error.message)
     }
   }
 
   const signOut = async () => {
     try {
-      setIsAuthenticating(true)
-      await firebaseSignOut(auth)
+      await authService.signOut()
       router.push('/login')
-    } catch (e) {
-      const authError = e as AuthError
-      setError(getErrorMessage(authError))
-      throw e
-    } finally {
-      setIsAuthenticating(false)
+    } catch (error: any) {
+      setError(error.message)
+    }
+  }
+
+  const signInWithGoogle = async () => {
+    try {
+      const user = await authService.signInWithGoogle()
+      if (user) {
+        await setDoc(doc(db, `users/${user.uid}`), {
+          email: user.email,
+          displayName: user.displayName,
+          createdAt: new Date().toISOString()
+        }, { merge: true })
+      }
+      router.push('/dashboard')
+    } catch (error: any) {
+      setError(error.message)
     }
   }
 
   const clearError = () => setError(null)
 
   return (
-    <AuthContext.Provider 
-      value={{ 
-        currentUser, 
-        loading: loading || isAuthenticating, 
-        error, 
-        signIn, 
-        signInWithGoogle,
-        signUp, 
-        signOut,
-        clearError
-      }}
-    >
-      {children}
+    <AuthContext.Provider value={{
+      currentUser,
+      loading,
+      error,
+      signIn,
+      signUp,
+      signOut,
+      signInWithGoogle,
+      clearError
+    }}>
+      {!loading && children}
     </AuthContext.Provider>
   )
 }
 
 export function useAuth() {
   const context = useContext(AuthContext)
-  if (!context) {
+  if (context === undefined) {
     throw new Error('useAuth must be used within an AuthProvider')
   }
   return context
