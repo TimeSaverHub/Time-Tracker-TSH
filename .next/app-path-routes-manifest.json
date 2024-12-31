@@ -1,1 +1,1 @@
-{"/login/page":"/login","/_not-found/page":"/_not-found","/signup/page":"/signup","/page":"/","/dashboard/page":"/dashboard"}
+{"/login/page":"/login","/auth/callback/page":"/auth/callback","/page":"/","/_not-found/page":"/_not-found","/signup/page":"/signup","/dashboard/page":"/dashboard"}

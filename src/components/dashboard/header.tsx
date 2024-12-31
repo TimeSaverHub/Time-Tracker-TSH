@@ -2,7 +2,7 @@
 
 import { useState } from 'react'
 import Link from 'next/link'
-import { useAuth } from '@/hooks/use-auth'
+import { useAuth } from '@/context/auth-context'
 import { Button } from '@/components/ui/button'
 import {
   DropdownMenu,
@@ -11,7 +11,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
-import { User, LogOut, Settings } from 'lucide-react'
+import { User, LogOut } from 'lucide-react'
 
 export function DashboardHeader() {
   const { currentUser, signOut } = useAuth()
@@ -39,29 +39,24 @@ export function DashboardHeader() {
           <div className="flex items-center gap-4">
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
-                <Button variant="ghost" className="relative h-8 w-8 rounded-full">
+                <Button variant="ghost" size="icon" className="relative h-8 w-8 rounded-full">
                   <User className="h-4 w-4" />
                 </Button>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end">
                 <div className="flex items-center justify-start gap-2 p-2">
                   <div className="flex flex-col space-y-1">
-                    <p className="text-sm font-medium leading-none">{currentUser?.name || 'User'}</p>
+                    <p className="text-sm font-medium leading-none">{currentUser?.displayName || 'User'}</p>
                     <p className="text-xs leading-none text-muted-foreground">
                       {currentUser?.email}
                     </p>
                   </div>
                 </div>
                 <DropdownMenuSeparator />
-                <DropdownMenuItem asChild>
-                  <Link href="/dashboard/settings">
-                    <Settings className="mr-2 h-4 w-4" />
-                    Settings
-                  </Link>
-                </DropdownMenuItem>
                 <DropdownMenuItem
                   onClick={handleSignOut}
                   disabled={isLoading}
+                  className="cursor-pointer"
                 >
                   <LogOut className="mr-2 h-4 w-4" />
                   Sign out

@@ -1,12 +1,19 @@
 'use client'
 
-import { ProtectedRoute } from '@/components/auth/protected-route'
+import { DashboardHeader } from '@/components/dashboard/header'
 
 export default function DashboardLayout({
   children,
 }: {
   children: React.ReactNode
 }) {
-  return <ProtectedRoute>{children}</ProtectedRoute>
+  return (
+    <div className="min-h-screen bg-background">
+      <DashboardHeader />
+      <main className="container mx-auto px-4 py-8">
+        {children}
+      </main>
+    </div>
+  )
 }
 
