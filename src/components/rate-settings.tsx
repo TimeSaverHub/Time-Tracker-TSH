@@ -2,15 +2,8 @@
 
 import { useState } from "react"
 import { Button } from "@/components/ui/button"
-import {
-  Sheet,
-  SheetContent,
-  SheetDescription,
-  SheetHeader,
-  SheetTitle,
-  SheetTrigger,
-} from "@/components/ui/sheet"
 import { Input } from "@/components/ui/input"
+import { Label } from "@/components/ui/label"
 import {
   Select,
   SelectContent,
@@ -18,51 +11,38 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select"
+import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card"
 import { Settings2 } from 'lucide-react'
 import { useToast } from "@/context/toast-context"
 import type { RateSettings } from "@/types/time-tracking"
-import { LoadingSpinner } from "@/components/shared/loading-spinner"
+import { useLanguage } from '@/context/language-context'
 
-interface RateSettingsButtonProps {
+interface RateSettingsProps {
   settings: RateSettings
-  onSettingsChange: (settings: RateSettings) => Promise<void>
+  onSave: (settings: RateSettings) => Promise<void>
 }
 
-export function RateSettingsButton({ settings, onSettingsChange }: RateSettingsButtonProps) {
+export function RateSettings({ settings, onSave }: RateSettingsProps) {
+  const { t } = useLanguage()
+  const [isEditing, setIsEditing] = useState(false)
   const [tempSettings, setTempSettings] = useState(settings)
   const [isLoading, setIsLoading] = useState(false)
-  const [isOpen, setIsOpen] = useState(false)
-  const { showToast } = useToast()
+  const { toast } = useToast()
 
   const handleSave = async () => {
     try {
       setIsLoading(true)
-      console.log('Attempting to save settings:', tempSettings)
-
-      const hourlyRate = Number(tempSettings.hourlyRate)
-      if (isNaN(hourlyRate)) {
-        throw new Error('Invalid hourly rate')
-      }
-
-      const settingsToSave = {
-        ...tempSettings,
-        hourlyRate
-      }
-
-      await onSettingsChange(settingsToSave)
-      setIsOpen(false)
-      showToast({
-        title: "Success",
-        description: "Settings saved successfully",
-        type: "success"
+      await onSave(tempSettings)
+      setIsEditing(false)
+      toast({
+        title: t('toast.rateUpdated'),
+        description: t('toast.rateUpdateSuccess')
       })
-    } catch (error: unknown) {
-      console.error('Error saving settings:', error)
-      const errorMessage = error instanceof Error ? error.message : "Failed to save settings. Please try again."
-      showToast({
+    } catch (error) {
+      toast({
         title: "Error",
-        description: errorMessage,
-        type: "error"
+        description: "Failed to update rate settings",
+        variant: "destructive"
       })
     } finally {
       setIsLoading(false)
@@ -70,64 +50,43 @@ export function RateSettingsButton({ settings, onSettingsChange }: RateSettingsB
   }
 
   return (
-    <Sheet open={isOpen} onOpenChange={setIsOpen}>
-      <SheetTrigger asChild>
-        <Button variant="outline" size="icon">
-          <Settings2 className="h-4 w-4" />
+    <div className="space-y-4">
+      <div className="space-y-2">
+        <Label>{t('timeTracker.hourlyRate')}</Label>
+        <Input
+          type="number"
+          value={tempSettings.hourlyRate}
+          onChange={(e) => setTempSettings({
+            ...tempSettings,
+            hourlyRate: parseFloat(e.target.value)
+          })}
+          min="0"
+          step="0.01"
+        />
+      </div>
+      <div className="space-y-2">
+        <Label>{t('timeTracker.currency')}</Label>
+        <Select
+          value={tempSettings.currency}
+          onValueChange={(value) => setTempSettings({
+            ...tempSettings,
+            currency: value
+          })}
+        >
+          <SelectTrigger>
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="EUR">EUR</SelectItem>
+            <SelectItem value="USD">USD</SelectItem>
+          </SelectContent>
+        </Select>
+      </div>
+      <div className="flex justify-end gap-2">
+        <Button onClick={handleSave} disabled={isLoading}>
+          {t('common.save')}
         </Button>
-      </SheetTrigger>
-      <SheetContent>
-        <SheetHeader>
-          <SheetTitle>Rate Settings</SheetTitle>
-          <SheetDescription>
-            Configure your hourly rate and currency
-          </SheetDescription>
-        </SheetHeader>
-        <div className="mt-6 space-y-4">
-          <div className="space-y-2">
-            <label className="text-sm font-medium">Hourly Rate</label>
-            <Input
-              type="number"
-              step="0.01"
-              min="0"
-              value={tempSettings.hourlyRate}
-              onChange={(e) =>
-                setTempSettings({
-                  ...tempSettings,
-                  hourlyRate: Number(e.target.value),
-                })
-              }
-            />
-          </div>
-          <div className="space-y-2">
-            <label className="text-sm font-medium">Currency</label>
-            <Select
-              value={tempSettings.currency}
-              onValueChange={(value: 'EUR' | 'USD') =>
-                setTempSettings({
-                  ...tempSettings,
-                  currency: value,
-                })
-              }
-            >
-              <SelectTrigger>
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="EUR">Euro (€)</SelectItem>
-                <SelectItem value="USD">US Dollar ($)</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
-          <Button 
-            className="w-full" 
-            onClick={handleSave}
-            disabled={isLoading}
-          >
-            {isLoading ? <LoadingSpinner /> : 'Save Settings'}
-          </Button>
-        </div>
-      </SheetContent>
-    </Sheet>
+      </div>
+    </div>
   )
 } 

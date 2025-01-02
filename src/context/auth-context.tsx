@@ -1,22 +1,15 @@
 'use client'
 
 import { createContext, useContext, useEffect, useState } from 'react'
-import { auth } from '@/firebase/firebase'
+import { User, updateProfile, onAuthStateChanged } from 'firebase/auth'
 import { useRouter } from 'next/navigation'
-import { onAuthStateChanged } from 'firebase/auth'
+import { auth } from '@/firebase/config'
 import { authService } from '@/lib/auth'
-import { doc, setDoc } from 'firebase/firestore'
-import { db } from '@/firebase/firebase'
 import Cookies from 'js-cookie'
-
-interface AuthUser {
-  id: string
-  email: string | null
-  displayName: string | null
-}
+import { initializeUserProfile } from '@/services/database-service'
 
 interface AuthContextType {
-  currentUser: AuthUser | null
+  currentUser: User | null
   loading: boolean
   error: string | null
   signIn: (email: string, password: string) => Promise<void>
@@ -26,65 +19,63 @@ interface AuthContextType {
   clearError: () => void
 }
 
-const AuthContext = createContext<AuthContextType | undefined>(undefined)
+const AuthContext = createContext<AuthContextType>({
+  currentUser: null,
+  loading: true,
+  error: null,
+  signIn: async () => {},
+  signUp: async () => {},
+  signOut: async () => {},
+  signInWithGoogle: async () => {},
+  clearError: () => {},
+})
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
-  const [currentUser, setCurrentUser] = useState<AuthUser | null>(null)
+  const [currentUser, setCurrentUser] = useState<User | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const router = useRouter()
 
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, async (user) => {
-      try {
-        if (user) {
-          setCurrentUser({
-            id: user.uid,
-            email: user.email,
-            displayName: user.displayName
-          })
-          Cookies.set('firebase-auth-token', user.uid, { expires: 7 })
-        } else {
-          setCurrentUser(null)
-          Cookies.remove('firebase-auth-token')
-          router.push('/login')
+      console.log('Auth state changed:', user?.uid)
+      if (user) {
+        try {
+          await initializeUserProfile(user)
+          console.log('User profile initialized')
+        } catch (error) {
+          console.error('Error initializing user profile:', error)
         }
-      } catch (error) {
-        console.error('Auth state change error:', error)
-      } finally {
-        setLoading(false)
       }
+      setCurrentUser(user)
+      setLoading(false)
     })
 
-    return () => unsubscribe()
-  }, [router])
+    return unsubscribe
+  }, [])
 
   const signIn = async (email: string, password: string) => {
     try {
       setError(null)
-      setLoading(true)
       await authService.signIn(email, password)
-      // Router push is handled by auth state change
+      router.push('/dashboard')
     } catch (error: any) {
-      console.error('Sign in error:', error)
       setError(error.message)
-      setLoading(false)
+      throw error
     }
   }
 
   const signUp = async (email: string, password: string, name: string) => {
     try {
+      setError(null)
       const user = await authService.signUp(email, password)
       if (user) {
-        await setDoc(doc(db, `users/${user.uid}`), {
-          email,
-          displayName: name,
-          createdAt: new Date().toISOString()
-        })
+        await updateProfile(user, { displayName: name })
       }
       router.push('/dashboard')
     } catch (error: any) {
       setError(error.message)
+      throw error
     }
   }
 
@@ -94,39 +85,37 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       router.push('/login')
     } catch (error: any) {
       setError(error.message)
+      throw error
     }
   }
 
   const signInWithGoogle = async () => {
     try {
-      const user = await authService.signInWithGoogle()
-      if (user) {
-        await setDoc(doc(db, `users/${user.uid}`), {
-          email: user.email,
-          displayName: user.displayName,
-          createdAt: new Date().toISOString()
-        }, { merge: true })
-      }
+      setError(null)
+      await authService.signInWithGoogle()
       router.push('/dashboard')
     } catch (error: any) {
       setError(error.message)
+      throw error
     }
   }
 
   const clearError = () => setError(null)
 
   return (
-    <AuthContext.Provider value={{
-      currentUser,
-      loading,
-      error,
-      signIn,
-      signUp,
-      signOut,
-      signInWithGoogle,
-      clearError
-    }}>
-      {!loading && children}
+    <AuthContext.Provider
+      value={{
+        currentUser,
+        loading,
+        error,
+        signIn,
+        signUp,
+        signOut,
+        signInWithGoogle,
+        clearError,
+      }}
+    >
+      {children}
     </AuthContext.Provider>
   )
 }

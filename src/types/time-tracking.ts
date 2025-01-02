@@ -11,6 +11,9 @@ export interface TimeEntry {
   userId: string
   createdAt: string
   cycleId?: string
+  projectId: string
+  projectName?: string
+  color?: string
 }
 
 export interface TimeEntryInput {
@@ -23,6 +26,9 @@ export interface TimeEntryInput {
   userId: string
   createdAt: string
   cycleId?: string
+  projectId: string
+  projectName: string
+  color?: string
 }
 
 export interface RateSettings {
@@ -49,4 +55,13 @@ export interface RegistrationCycleInput {
   createdAt: string
   status: 'active' | 'completed'
   currency: string
+}
+
+export interface Project {
+  id?: string
+  name: string
+  description: string
+  color: string
+  userId: string
+  createdAt: string
 } 

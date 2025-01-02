@@ -1,6 +1,7 @@
 'use client'
 
-import { DashboardHeader } from '@/components/dashboard/header'
+import { NavBar } from '@/components/nav-bar'
+import { Footer } from '@/components/footer'
 
 export default function DashboardLayout({
   children,
@@ -8,11 +9,10 @@ export default function DashboardLayout({
   children: React.ReactNode
 }) {
   return (
-    <div className="min-h-screen bg-background">
-      <DashboardHeader />
-      <main className="container mx-auto px-4 py-8">
-        {children}
-      </main>
+    <div className="min-h-screen flex flex-col">
+      <NavBar />
+      <main className="flex-1 py-6">{children}</main>
+      <Footer />
     </div>
   )
 }

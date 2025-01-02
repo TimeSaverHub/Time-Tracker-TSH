@@ -12,6 +12,7 @@ import { CalendarIcon, PlusCircle } from 'lucide-react'
 import { format } from "date-fns"
 import type { RegistrationCycle } from "@/types/time-tracking"
 import { useToast } from "@/context/toast-context"
+import { useLanguage } from "@/context/language-context"
 
 interface CycleHeaderProps {
   currentCycle: RegistrationCycle | null
@@ -19,26 +20,27 @@ interface CycleHeaderProps {
 }
 
 export function CycleHeader({ currentCycle, onCreateCycle }: CycleHeaderProps) {
+  const { t } = useLanguage()
   const [startDate, setStartDate] = useState<Date>()
   const [endDate, setEndDate] = useState<Date>()
   const [isCreating, setIsCreating] = useState(false)
-  const { showToast } = useToast()
+  const { toast } = useToast()
 
   const handleCreateCycle = async () => {
     if (!startDate || !endDate) {
-      showToast({
-        title: "Error",
-        description: "Please select both start and end dates",
-        type: "error"
+      toast({
+        title: t('common.error'),
+        description: 'Please select both dates',
+        variant: 'destructive'
       })
       return
     }
 
     if (endDate < startDate) {
-      showToast({
+      toast({
         title: "Error",
         description: "End date must be after start date",
-        type: "error"
+        variant: "destructive"
       })
       return
     }
@@ -48,16 +50,16 @@ export function CycleHeader({ currentCycle, onCreateCycle }: CycleHeaderProps) {
       await onCreateCycle(startDate, endDate)
       setStartDate(undefined)
       setEndDate(undefined)
-      showToast({
+      toast({
         title: "Success",
         description: "Registration cycle created",
-        type: "success"
+        variant: "default"
       })
     } catch (error) {
-      showToast({
+      toast({
         title: "Error",
         description: "Failed to create registration cycle",
-        type: "error"
+        variant: "destructive"
       })
     } finally {
       setIsCreating(false)

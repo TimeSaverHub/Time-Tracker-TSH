@@ -3,16 +3,19 @@
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { useAuth } from '@/context/auth-context'
+import { useToast } from '@/context/toast-context'
+import { useLanguage } from '@/context/language-context'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
-import { useToast } from '@/context/toast-context'
+import { Label } from '@/components/ui/label'
 
 export function LoginForm() {
+  const { t } = useLanguage()
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [loading, setLoading] = useState(false)
   const { signIn, signInWithGoogle } = useAuth()
-  const { showToast } = useToast()
+  const { toast } = useToast()
   const router = useRouter()
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -20,16 +23,13 @@ export function LoginForm() {
     setLoading(true)
 
     try {
-      console.log('Attempting to sign in with:', email)
       await signIn(email, password)
-      console.log('Sign in successful')
       router.push('/dashboard')
     } catch (error) {
-      console.error('Sign in failed:', error)
-      showToast({
-        title: 'Error',
-        description: 'Failed to sign in. Please check your credentials.',
-        type: 'error'
+      toast({
+        title: t('common.error'),
+        description: (error as Error).message,
+        variant: 'destructive'
       })
     } finally {
       setLoading(false)
@@ -37,53 +37,52 @@ export function LoginForm() {
   }
 
   const handleGoogleSignIn = async () => {
-    setLoading(true)
-
     try {
       await signInWithGoogle()
       router.push('/dashboard')
     } catch (error) {
-      showToast({
-        title: 'Error',
-        description: 'Failed to sign in with Google.',
-        type: 'error'
+      toast({
+        title: t('common.error'),
+        description: (error as Error).message,
+        variant: 'destructive'
       })
-    } finally {
-      setLoading(false)
     }
   }
 
   return (
-    <div className="space-y-4">
-      <form onSubmit={handleSubmit} className="space-y-4">
+    <form onSubmit={handleSubmit} className="space-y-4">
+      <div className="space-y-2">
+        <Label htmlFor="email">{t('auth.email')}</Label>
         <Input
+          id="email"
           type="email"
-          placeholder="Email"
           value={email}
           onChange={(e) => setEmail(e.target.value)}
           required
         />
+      </div>
+      <div className="space-y-2">
+        <Label htmlFor="password">{t('auth.password')}</Label>
         <Input
+          id="password"
           type="password"
-          placeholder="Password"
           value={password}
           onChange={(e) => setPassword(e.target.value)}
           required
         />
-        <Button type="submit" disabled={loading} className="w-full">
-          Sign In
-        </Button>
-      </form>
-
+      </div>
+      <Button type="submit" className="w-full" disabled={loading}>
+        {loading ? t('common.loading') : t('auth.signIn')}
+      </Button>
       <Button
+        type="button"
         variant="outline"
         className="w-full"
         onClick={handleGoogleSignIn}
-        disabled={loading}
       >
         Sign in with Google
       </Button>
-    </div>
+    </form>
   )
 }
 

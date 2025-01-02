@@ -3,7 +3,9 @@
 import { useState } from 'react'
 import Link from 'next/link'
 import { useAuth } from '@/context/auth-context'
+import { useLanguage } from '@/context/language-context'
 import { Button } from '@/components/ui/button'
+import { LanguageSwitcher } from '@/components/language-switcher'
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -15,6 +17,7 @@ import { User, LogOut } from 'lucide-react'
 
 export function DashboardHeader() {
   const { currentUser, signOut } = useAuth()
+  const { t } = useLanguage()
   const [isLoading, setIsLoading] = useState(false)
 
   const handleSignOut = async () => {
@@ -37,6 +40,7 @@ export function DashboardHeader() {
           </Link>
           
           <div className="flex items-center gap-4">
+            <LanguageSwitcher />
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
                 <Button variant="ghost" size="icon" className="relative h-8 w-8 rounded-full">
@@ -46,7 +50,9 @@ export function DashboardHeader() {
               <DropdownMenuContent align="end">
                 <div className="flex items-center justify-start gap-2 p-2">
                   <div className="flex flex-col space-y-1">
-                    <p className="text-sm font-medium leading-none">{currentUser?.displayName || 'User'}</p>
+                    <p className="text-sm font-medium leading-none">
+                      {currentUser?.displayName || t('common.user')}
+                    </p>
                     <p className="text-xs leading-none text-muted-foreground">
                       {currentUser?.email}
                     </p>
@@ -59,7 +65,7 @@ export function DashboardHeader() {
                   className="cursor-pointer"
                 >
                   <LogOut className="mr-2 h-4 w-4" />
-                  Sign out
+                  {t('auth.signOut')}
                 </DropdownMenuItem>
               </DropdownMenuContent>
             </DropdownMenu>

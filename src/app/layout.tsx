@@ -1,13 +1,14 @@
+import type { Metadata } from 'next'
 import { Inter } from 'next/font/google'
-import { AuthProvider } from '@/context/auth-context'
-import { ToastProvider } from '@/context/toast-context'
 import './globals.css'
+import { Providers } from '@/components/providers'
+import { AuthGuard } from '@/components/auth-guard'
 
 const inter = Inter({ subsets: ['latin'] })
 
-export const metadata = {
+export const metadata: Metadata = {
   title: 'Time Tracker',
-  description: 'Track your time and manage your projects',
+  description: 'Track your time and projects',
 }
 
 export default function RootLayout({
@@ -16,18 +17,11 @@ export default function RootLayout({
   children: React.ReactNode
 }) {
   return (
-    <html lang="en">
-      <head>
-        <meta charSet="utf-8" />
-        <meta name="viewport" content="width=device-width, initial-scale=1" />
-        <link rel="icon" href="/favicon.ico" />
-      </head>
+    <html lang="en" suppressHydrationWarning>
       <body className={inter.className}>
-        <AuthProvider>
-          <ToastProvider>
-            {children}
-          </ToastProvider>
-        </AuthProvider>
+        <Providers>
+          <AuthGuard>{children}</AuthGuard>
+        </Providers>
       </body>
     </html>
   )
